@@ -19,28 +19,58 @@ int compareFiles(char* path) {
 }
 
 //Recursive searching function
-void searchFiles(const char *name)
+void searchFiles(char *name)            //should name be const?
 {
     DIR *dir;
     struct dirent *entry;
     
     if (!(dir = opendir(name))) {
-        fprintf(stderr, "Warning: Could not open directory '%s': %s\n", name, strerror(errno));
+        fprintf(stderr, "Warning: Could not open directory %s: %s\n", name, strerror(errno));
         return;
     }
     
     while ((entry = readdir(dir)) != NULL) {
+        //check if entry is another directory
         if (entry->d_type == DT_DIR) {
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
             char path[1024];
             sprintf(path, "%s/%s", name, entry->d_name);
-            printf("[%s]\n", entry->d_name);
+            //printf("[%s]\n", entry->d_name);
             searchFiles(path);
+            continue;                                           //does this work???
+        }
+        //check for symlink
+        else if (entry->d_type == DT_LNK) {
+            //find what it resolves to target or duplicate
+            //if duplicate, get contents (path) of file
+            //print path, "symlink resolves to...", and possibly contents
+        }
+        else if (entry->d_type == DT_REG) {
+            //run stats on file
+            struct stat st;
+            if (stat(name,&st) < 0) {
+                fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", name, strerror(errno));
+            }
+            ino_t ino = st.st_ino;
+            mode_t mode = st.st_mode;
+            //find permissions
+            off_t size = st.st_size;
+            
+            //check for hardlink
+            if (ino == inodenum) {
+                //hardlink: print path, "hardlink", permissions
+            }
+            
+            //check for duplicate
+            else if ((size == filesize) && (compareFiles(name) == 1)) {
+                //duplicate: print path, "duplicate of target", nlink, permissions
+            }
         }
         else {
-            printf("- %s\n", entry->d_name);
+            fprintf(stderr, "Debug: Directory entry %s not a directory, regular file, or symlink, skipping\n", name);
         }
+        return;
     }
     closedir(dir);
 }
