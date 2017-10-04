@@ -8,40 +8,44 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-//#include <unistd.h>
+#include <unistd.h>
 
 //Global Variables - stats for target file
 ino_t inodenum;
 off_t filesize;
 
 //Function to compare contents of files
+//returns 1 if identical
+//returns 0 if not identical
+//returns -1 on error
 int compareFiles(char* path) {
+    //fprintf(stderr, "Error comparing '%s' to target file, skipping\n", path);
     return 1;
 }
 
 //Recursive searching function
-void searchFiles(char *name) {
+void searchFiles(char *directory) {
     DIR *dir;
     struct dirent *entry;
     
-    if (!(dir = opendir(name))) {
-        fprintf(stderr, "Warning: Could not open directory %s: %s\n", name, strerror(errno));
+    if (!(dir = opendir(directory))) {
+        fprintf(stderr, "Warning: Could not open directory %s: %s\n", directory, strerror(errno));
         return;
     }
     
     while ((entry = readdir(dir)) != NULL) {
+
         //current path
         char path[1024];
-        sprintf(path, "%s/%s", name, entry->d_name);
+        sprintf(path, "%s/%s", directory, entry->d_name);
         
         //run stat on entry
         struct stat st;
         if (stat(path,&st) < 0) {
-            fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", name, strerror(errno));
+            fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", directory, strerror(errno));
         }
         //get stats
         ino_t ino = st.st_ino; //inode number
-        mode_t mode = st.st_mode; //mode
         off_t size = st.st_size; //size in bytes
         
         //check if entry is another directory
@@ -51,16 +55,29 @@ void searchFiles(char *name) {
             searchFiles(path);
         }
         //check for symlink
-        else if (entry->d_type == DT_LNK) {                     //how to make symlink? alias doesn't work
-            //find what it resolves to target or duplicate
-            //if duplicate, get contents (path) of file
-            //print path, "symlink resolves to...", and possibly contents
-            printf("\t%s\tFOUND SYMLINK",path);
+        else if (entry->d_type == DT_LNK) {                     //how to test symlink? alias doesn't work
+            //resolves to target
+            if (ino == inodenum) {
+                printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
+            }
+            //resolves to duplicate
+            else if (size == filesize && compareFiles(path) == 1) {
+                //find contents of link
+                char link[1024];
+                if (readlink(path,link,sizeof(link)) < 0) {
+                    fprintf(stderr, "Warning: Could check contents of symlink %s: %s\n", path, strerror(errno));
+                }
+                else {
+                   printf("%s\tSYMLINK (%s) RESOLVES TO DUPLICATE\n",path,link);
+                }
+                
+            }
         }
         //if regular file, check for hardlink or duplicate
         else if (entry->d_type == DT_REG) {
             //get permissions
-            int o_permissions = (mode & S_IROTH); //other read permissions          //doesn't work? check with chmod?
+            mode_t mode = st.st_mode;
+            int o_permissions = (mode & S_IROTH); //'other' read permissions          //doesn't work? check with chmod?
             char* perm_string;
             if (o_permissions == 1) {
                 perm_string = "OK READ by OTHER";
@@ -71,19 +88,17 @@ void searchFiles(char *name) {
 
             //check for hardlink
             if (ino == inodenum) {
-                //print path, "hardlink", permissions
                 printf("%s\tHARD LINK TO TARGET\t%s\n",path,perm_string);
             }
             
             //check for duplicate
-            else if ((size == filesize) && (compareFiles(path) == 1)) {
-                //print path, "duplicate of target", nlink, permissions
+            else if (size == filesize && compareFiles(path) == 1) {
                 nlink_t links = st.st_nlink;
                 printf("%s\tDUPLICATE OF TARGET\tnlink=%d\t%s\n",path,links,perm_string);
             }
         }
         else {
-            fprintf(stderr, "Debug: Directory entry %s not a directory, regular file, or symlink, skipping\n", name);
+            fprintf(stderr, "Directory entry %s not a directory, regular file, or symlink, skipping\n", directory);
         }
     }
     closedir(dir);
