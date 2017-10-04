@@ -31,30 +31,39 @@ void searchFiles(char *name)            //should name be const?
     }
     
     while ((entry = readdir(dir)) != NULL) {
+        //new path name = name + current entry
+        char path[1024];
+        sprintf(path, "%s/%s", name, entry->d_name);
+        
+        printf("[%s]\n", entry->d_name);
+        //run stat on entry
+        struct stat st;
+        if (stat(path,&st) < 0) {
+            fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", name, strerror(errno));
+        }
+        ino_t ino = st.st_ino; //inode number
+        mode_t mode = st.st_mode; //mode
+        off_t size = st.st_size; //size in bytes
+        
         //check if entry is another directory
-        if (entry->d_type == DT_DIR) {
+        if (entry->d_type == DT_DIR) {                      //should i check type of entry using mode???
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
-            char path[1024];
-            sprintf(path, "%s/%s", name, entry->d_name);
-            printf("[%s]\n", entry->d_name);
             searchFiles(path);
         }
         //check for symlink
-        else if (entry->d_type == DT_LNK) {
+        else if (entry->d_type == DT_LNK) {                     //how to make symlink? alias doesn't work
             //find what it resolves to target or duplicate
             //if duplicate, get contents (path) of file
             //print path, "symlink resolves to...", and possibly contents
+            printf("\t%s\tFOUND SYMLINK",name);
         }
+        //check for hardlink or duplicate
         else if (entry->d_type == DT_REG) {
+            
             printf("\t%s\n",entry->d_name);
-            //run stats on file
-            struct stat st;
-            if (stat(name,&st) < 0) {
-                fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", name, strerror(errno));
-            }
-            ino_t ino = st.st_ino; //inode number
-            mode_t mode = st.st_mode; //mode
+            
+            //get permissions
             int o_permissions = (mode & S_IROTH); //other read permissions          //doesn't work? check with chmod?
             char* perm_string;
             if (o_permissions == 1) {
@@ -63,8 +72,8 @@ void searchFiles(char *name)            //should name be const?
             else {
                 perm_string = "NOT READABLE by OTHER";
             }
-            off_t size = st.st_size; //size in bytes
-            printf("inode number:%llu\npermissions:%s\n",ino,perm_string);
+            
+            printf("inode number:%llu\tpermissions:%s\tsize:%lld\n",ino,perm_string,size);
             //check for hardlink
             if (ino == inodenum) {
                 //hardlink: print path, "hardlink", permissions
@@ -78,6 +87,7 @@ void searchFiles(char *name)            //should name be const?
                 printf("%s\tDUPLICATE OF TARGET\tnlink=%d\t%s\n",name,links,perm_string);
             }
         }
+        //otherwise, skip
         else {
             fprintf(stderr, "Debug: Directory entry %s not a directory, regular file, or symlink, skipping\n", name);
         }
@@ -106,12 +116,6 @@ int main(int argc, char**argv) {
     nlink_t links = st.st_nlink;
     printf("Target inode number:%llu\nTarget file size:%lld\nTarget nlink:%hu\n",inodenum,filesize,links);
     searchFiles(dirname);
-    
-    
-    
-    //ino_t test = 32878726;
-    
-    //printf("%d\n", (inodenum==test));
     
     return 0;
 }
