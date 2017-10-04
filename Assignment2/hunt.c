@@ -20,8 +20,7 @@ int compareFiles(char* path) {
 }
 
 //Recursive searching function
-void searchFiles(char *name)            //should name be const?
-{
+void searchFiles(char *name) {
     DIR *dir;
     struct dirent *entry;
     
@@ -31,16 +30,16 @@ void searchFiles(char *name)            //should name be const?
     }
     
     while ((entry = readdir(dir)) != NULL) {
-        //new path name = name + current entry
+        //current path
         char path[1024];
         sprintf(path, "%s/%s", name, entry->d_name);
         
-        printf("[%s]\n", entry->d_name);
         //run stat on entry
         struct stat st;
         if (stat(path,&st) < 0) {
             fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", name, strerror(errno));
         }
+        //get stats
         ino_t ino = st.st_ino; //inode number
         mode_t mode = st.st_mode; //mode
         off_t size = st.st_size; //size in bytes
@@ -56,13 +55,10 @@ void searchFiles(char *name)            //should name be const?
             //find what it resolves to target or duplicate
             //if duplicate, get contents (path) of file
             //print path, "symlink resolves to...", and possibly contents
-            printf("\t%s\tFOUND SYMLINK",name);
+            printf("\t%s\tFOUND SYMLINK",path);
         }
-        //check for hardlink or duplicate
+        //if regular file, check for hardlink or duplicate
         else if (entry->d_type == DT_REG) {
-            
-            printf("\t%s\n",entry->d_name);
-            
             //get permissions
             int o_permissions = (mode & S_IROTH); //other read permissions          //doesn't work? check with chmod?
             char* perm_string;
@@ -72,22 +68,20 @@ void searchFiles(char *name)            //should name be const?
             else {
                 perm_string = "NOT READABLE by OTHER";
             }
-            
-            printf("inode number:%llu\tpermissions:%s\tsize:%lld\n",ino,perm_string,size);
+
             //check for hardlink
             if (ino == inodenum) {
-                //hardlink: print path, "hardlink", permissions
-                printf("%s\tHARD LINK TO TARGET\t%s\n",name,perm_string);
+                //print path, "hardlink", permissions
+                printf("%s\tHARD LINK TO TARGET\t%s\n",path,perm_string);
             }
             
             //check for duplicate
-            else if ((size == filesize) && (compareFiles(name) == 1)) {
-                //duplicate: print path, "duplicate of target", nlink, permissions
+            else if ((size == filesize) && (compareFiles(path) == 1)) {
+                //print path, "duplicate of target", nlink, permissions
                 nlink_t links = st.st_nlink;
-                printf("%s\tDUPLICATE OF TARGET\tnlink=%d\t%s\n",name,links,perm_string);
+                printf("%s\tDUPLICATE OF TARGET\tnlink=%d\t%s\n",path,links,perm_string);
             }
         }
-        //otherwise, skip
         else {
             fprintf(stderr, "Debug: Directory entry %s not a directory, regular file, or symlink, skipping\n", name);
         }
