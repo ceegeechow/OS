@@ -19,27 +19,27 @@ int compareFiles(char* path) {
 }
 
 //Recursive searching function
-void searchFiles(const char *name, int indent)
+void searchFiles(const char *name)
 {
     DIR *dir;
     struct dirent *entry;
     
     if (!(dir = opendir(name))) {
-        fprintf(stderr, "Warning: Could not open directory '%s': %s\n", name, strerror(errno)); //need to specify difference between end of path and failure to open
+        fprintf(stderr, "Warning: Could not open directory '%s': %s\n", name, strerror(errno));
         return;
     }
     
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_DIR) {
-            char path[1024];
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
-            snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
-            printf("%*s[%s]\n", indent, "", entry->d_name);
-            searchFiles(path, indent + 2);
+            char path[1024];
+            sprintf(path, "%s/%s", name, entry->d_name);
+            printf("[%s]\n", entry->d_name);
+            searchFiles(path);
         }
         else {
-            printf("%*s- %s\n", indent, "", entry->d_name);
+            printf("- %s\n", entry->d_name);
         }
     }
     closedir(dir);
@@ -64,7 +64,7 @@ int main(int argc, char**argv) {
     inodenum = st.st_ino;
     filesize = st.st_size;
     
-    //searchFiles(dirname,0);
+    searchFiles(dirname);
     
     
     
