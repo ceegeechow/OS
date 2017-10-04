@@ -39,7 +39,6 @@ void searchFiles(char *name)            //should name be const?
             sprintf(path, "%s/%s", name, entry->d_name);
             printf("[%s]\n", entry->d_name);
             searchFiles(path);
-            continue;                                           //does this work???
         }
         //check for symlink
         else if (entry->d_type == DT_LNK) {
@@ -48,6 +47,7 @@ void searchFiles(char *name)            //should name be const?
             //print path, "symlink resolves to...", and possibly contents
         }
         else if (entry->d_type == DT_REG) {
+            printf("\t%s\n",entry->d_name);
             //run stats on file
             struct stat st;
             if (stat(name,&st) < 0) {
@@ -55,7 +55,7 @@ void searchFiles(char *name)            //should name be const?
             }
             ino_t ino = st.st_ino; //inode number
             mode_t mode = st.st_mode; //mode
-            int o_permissions = (mode & S_IROTH); //other read permissions
+            int o_permissions = (mode & S_IROTH); //other read permissions          //doesn't work? check with chmod?
             char* perm_string;
             if (o_permissions == 1) {
                 perm_string = "OK READ by OTHER";
@@ -64,7 +64,7 @@ void searchFiles(char *name)            //should name be const?
                 perm_string = "NOT READABLE by OTHER";
             }
             off_t size = st.st_size; //size in bytes
-            
+            printf("inode number:%llu\npermissions:%s\n",ino,perm_string);
             //check for hardlink
             if (ino == inodenum) {
                 //hardlink: print path, "hardlink", permissions
@@ -81,7 +81,6 @@ void searchFiles(char *name)            //should name be const?
         else {
             fprintf(stderr, "Debug: Directory entry %s not a directory, regular file, or symlink, skipping\n", name);
         }
-        return;
     }
     closedir(dir);
 }
@@ -104,13 +103,14 @@ int main(int argc, char**argv) {
     }
     inodenum = st.st_ino;
     filesize = st.st_size;
-    
+    nlink_t links = st.st_nlink;
+    printf("Target inode number:%llu\nTarget file size:%lld\nTarget nlink:%hu\n",inodenum,filesize,links);
     searchFiles(dirname);
     
     
     
     //ino_t test = 32878726;
-    //printf("inode number:%llu\nfile size:%lld\n",inodenum,filesize);
+    
     //printf("%d\n", (inodenum==test));
     
     return 0;
