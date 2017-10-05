@@ -27,7 +27,7 @@ int min(int x, int y)
 //returns 1 if identical
 //returns 0 if not identical
 //returns -1 on error
-int compareFiles(char* path) {        //could this be more efficient???
+int compareFiles(char* path) {
     int fd1, fd2;
     char* b1[buff_size], b2[buff_size];
     //open files
@@ -82,64 +82,76 @@ void searchFiles(char *directory) {
                 continue;
             searchFiles(path);
         }
-
-        else {
-            //run stat on entry
+  
+        //symlink handling
+        else if (entry->d_type == DT_LNK) {
+            
+            //find contents of link
+            char link[1024];
+            if (readlink(path,link,sizeof(link)) < 0) {
+                fprintf(stderr, "Warning: Could check contents of symlink %s: %s\n", path, strerror(errno));
+                continue;
+            }
+            
+            //run stat on link
             struct stat st;
-            if (stat(path,&st) < 0) {
-                fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", directory, strerror(errno));
+            if (stat(link,&st) < 0) {
+                fprintf(stderr, "Warning: Could not run stat on contents of symlink %s (%s): %s\n", path, link, strerror(errno));
+                continue;
             }
             
             //get stats
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
             
-            //symlink handling
-            if (entry->d_type == DT_LNK) {                     //how to test symlink? alias doesn't work
-                //resolves to target
-                if (ino == target_ino) {
-                    printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
-                }
-                //resolves to duplicate
-                else if (size == target_size && compareFiles(path) == 1) {
-                    //find contents of link
-                    char link[1024];
-                    if (readlink(path,link,sizeof(link)) < 0) {
-                        fprintf(stderr, "Warning: Could check contents of symlink %s: %s\n", path, strerror(errno));
-                    }
-                    else {
-                        printf("%s\tSYMLINK (%s) RESOLVES TO DUPLICATE\n",path,link);
-                    }
-                }
+            //resolves to target
+            if (ino == target_ino) {
+                printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
             }
-            //regular file handling
-            else if (entry->d_type == DT_REG) {
-                //get permissions
-                mode_t mode = st.st_mode;
-                int o_permissions = (mode & S_IROTH); //'other' read permissions          //doesn't work? check with chmod?
-                char* perm_string;
-                if (o_permissions == 1) {
-                    perm_string = "OK READ by OTHER";
-                }
-                else {
-                    perm_string = "NOT READABLE by OTHER";
-                }
-                
-                //check for hardlink
-                if (ino == target_ino) {
-                    printf("%s\tHARD LINK TO TARGET\t%s\n",path,perm_string);
-                }
-                
-                //check for duplicate
-                else if (size == target_size && compareFiles(path) == 1) {
-                    nlink_t links = st.st_nlink;
-                    printf("%s\tDUPLICATE OF TARGET\tnlink=%d\t%s\n",path,links,perm_string);
-                }
+            //resolves to duplicate
+            else if (size == target_size && compareFiles(link) == 1) {
+                printf("%s\tSYMLINK (%s) RESOLVES TO DUPLICATE\n",path,link);
             }
-            //other file type
+        }
+        //regular file handling
+        else if (entry->d_type == DT_REG) {
+            
+            //run stat on entry
+            struct stat st;
+            if (stat(path,&st) < 0) {
+                fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", path, strerror(errno));
+                continue;
+            }
+            
+            //get stats
+            ino_t ino = st.st_ino; //inode number
+            off_t size = st.st_size; //size in bytes
+            
+            //get permissions
+            mode_t mode = st.st_mode;
+            int o_permissions = (mode & S_IROTH); //'other' read permissions          //doesn't work? check with chmod?
+            char* perm_string;
+            if (o_permissions == 1) {
+                perm_string = "OK READ by OTHER";
+            }
             else {
-                fprintf(stderr, "Directory entry %s not a directory, regular file, or symlink, skipping\n", path);
+                perm_string = "NOT READABLE by OTHER";
             }
+            
+            //check for hardlink
+            if (ino == target_ino) {
+                printf("%s\tHARD LINK TO TARGET\t%s\n",path,perm_string);
+            }
+            
+            //check for duplicate
+            else if (size == target_size && compareFiles(path) == 1) {
+                nlink_t links = st.st_nlink;
+                printf("%s\tDUPLICATE OF TARGET (nlink=%d)\t%s\n",path,links,perm_string);
+            }
+        }
+        //other file type
+        else {
+            fprintf(stderr, "Directory entry %s not a directory, regular file, or symlink, skipping\n", path);
         }
     }
     closedir(dir);
