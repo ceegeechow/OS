@@ -97,18 +97,25 @@ void searchFiles(char *directory) {
                 continue;
             }
 
+            mode_t mode = st.st_mode; //mode
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
             dev_t dev = st.st_dev; //dev number
             
-            //resolves to target
-            if (ino == target_ino && dev == target_dev) {
-                printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
+            if ((mode & S_IFREG) != 0) {
+                //resolves to target
+                if (ino == target_ino && dev == target_dev) {
+                    printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
+                }
+                //resolves to duplicate
+                else if (size == target_size && compareFiles(link) == 1) {
+                    printf("%s\tSYMLINK (%s) RESOLVES TO DUPLICATE\n",path,link);
+                }
             }
-            //resolves to duplicate
-            else if (size == target_size && compareFiles(link) == 1) {
-                printf("%s\tSYMLINK (%s) RESOLVES TO DUPLICATE\n",path,link);
+            else {
+                printf("%s links to something not a file, skipping\n", path);
             }
+            
         }
         //regular file handling
         else if (entry->d_type == DT_REG) {
@@ -149,7 +156,7 @@ void searchFiles(char *directory) {
         }
         //other file type
         else {
-            fprintf(stderr, "Directory entry %s not a directory, regular file, or symlink, skipping\n", path);
+            printf("%s not a directory, regular file, or symlink, skipping\n", path);
         }
     }
     closedir(dir);
