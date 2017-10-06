@@ -1,5 +1,6 @@
+//  Camille Chow
 //  hunt.c
-//  OS_hw2
+//  ECE357 Assignment 2
 //  10/8/17
 
 #include <sys/stat.h>
@@ -16,7 +17,7 @@ ino_t target_ino;
 off_t target_size;
 dev_t target_dev;
 char* target_name;
-int buff_size = 1024;
+int buff_size = BUFSIZ;
 
 //Function to compare contents of files
 //returns 1 if identical
@@ -127,7 +128,6 @@ void searchFiles(char *directory) {
             //get permissions
             mode_t mode = st.st_mode;
             unsigned int p = (mode & S_IROTH); //'other' read permissions
-            printf("%d\n",p);
             char* perm_string;
 
             if (p != 0) {
