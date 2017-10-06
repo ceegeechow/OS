@@ -129,7 +129,7 @@ void searchFiles(char *directory) {
 
             ino_t ino = st.st_ino;
             off_t size = st.st_size;
-            dev_t dev = st.st_dev
+            dev_t dev = st.st_dev;
             
             //get permissions
             mode_t mode = st.st_mode;
@@ -165,7 +165,7 @@ void searchFiles(char *directory) {
 int main(int argc, char**argv) {
     
     if (argc != 3) {
-        fprintf(stderr, "Incorrect number of input arguments\n", target_name, strerror(errno));
+        fprintf(stderr, "Incorrect number of input arguments\n");
         return -1;
     }
     
