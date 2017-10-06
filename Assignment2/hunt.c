@@ -23,7 +23,7 @@ int buff_size = 1024;
 //returns 0 if not identical
 //returns -1 on error
 int compareFiles(char* path) {
-    //printf("checking %s to see if duplicate\n",path);
+    
     int fd1, fd2;
     char* b1[buff_size], b2[buff_size];
     
@@ -126,10 +126,11 @@ void searchFiles(char *directory) {
             
             //get permissions
             mode_t mode = st.st_mode;
-            int p = (mode & S_IROTH); //'other' read permissions
+            unsigned int p = (mode & S_IROTH); //'other' read permissions
+            printf("%d\n",p);
             char* perm_string;
-//not correct!!!!
-            if (p == 1) {
+
+            if (p != 0) {
                 perm_string = "OK READ by OTHER";
             }
             else {
@@ -176,8 +177,6 @@ int main(int argc, char**argv) {
     target_size = st.st_size;
     target_dev = st.st_dev;
     
-    //nlink_t links = st.st_nlink;
-    //printf("Target inode number:%llu\nTarget file size:%lld\nTarget nlink:%hu\n",target_ino,target_size,links);
     searchFiles(starting_directory);
     
     return 0;
