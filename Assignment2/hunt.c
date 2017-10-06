@@ -17,7 +17,7 @@ ino_t target_ino;
 off_t target_size;
 dev_t target_dev;
 char* target_name;
-int buff_size = BUFSIZ;
+const int buff_size = BUFSIZ;
 
 //Function to compare contents of files
 //returns 1 if identical
@@ -58,6 +58,7 @@ int compareFiles(char* path) {
 
 //Recursive searching function
 void searchFiles(char *directory) {
+    
     DIR *dir;
     struct dirent *entry;
     
@@ -95,8 +96,7 @@ void searchFiles(char *directory) {
                 fprintf(stderr, "Warning: Could not run stat on contents of symlink %s (%s): %s\n", path, link, strerror(errno));
                 continue;
             }
-            
-            //get stats
+
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
             dev_t dev = st.st_dev; //dev number
@@ -119,8 +119,7 @@ void searchFiles(char *directory) {
                 fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", path, strerror(errno));
                 continue;
             }
-            
-            //get stats
+
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
             dev_t dev = st.st_dev; //dev number
