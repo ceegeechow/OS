@@ -97,10 +97,10 @@ void searchFiles(char *directory) {
                 continue;
             }
 
-            mode_t mode = st.st_mode; //mode
-            ino_t ino = st.st_ino; //inode number
-            off_t size = st.st_size; //size in bytes
-            dev_t dev = st.st_dev; //dev number
+            mode_t mode = st.st_mode;
+            ino_t ino = st.st_ino;
+            off_t size = st.st_size;
+            dev_t dev = st.st_dev;
             
             if ((mode & S_IFREG) != 0) {
                 //resolves to target
@@ -127,16 +127,15 @@ void searchFiles(char *directory) {
                 continue;
             }
 
-            ino_t ino = st.st_ino; //inode number
-            off_t size = st.st_size; //size in bytes
-            dev_t dev = st.st_dev; //dev number
+            ino_t ino = st.st_ino;
+            off_t size = st.st_size;
+            dev_t dev = st.st_dev
             
             //get permissions
             mode_t mode = st.st_mode;
-            unsigned int p = (mode & S_IROTH); //'other' read permissions
             char* perm_string;
 
-            if (p != 0) {
+            if ((mode & S_IROTH) != 0) {
                 perm_string = "OK READ by OTHER";
             }
             else {
@@ -164,6 +163,11 @@ void searchFiles(char *directory) {
 
 //main loop
 int main(int argc, char**argv) {
+    
+    if (argc != 3) {
+        fprintf(stderr, "Incorrect number of input arguments\n", target_name, strerror(errno));
+        return -1;
+    }
     
     target_name = argv[1];
     char* starting_directory = argv[2];
