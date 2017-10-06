@@ -14,22 +14,19 @@
 //Global Variables
 ino_t target_ino;
 off_t target_size;
+dev_t target_dev;
 char* target_name;
-int buff_size = 2048;
-
-// Find the minimum of two ints
-int min(int x, int y)
-{
-    return (x < y) ? x : y;
-}
+int buff_size = 1024;
 
 //Function to compare contents of files
 //returns 1 if identical
 //returns 0 if not identical
 //returns -1 on error
 int compareFiles(char* path) {
+    //printf("checking %s to see if duplicate\n",path);
     int fd1, fd2;
     char* b1[buff_size], b2[buff_size];
+    
     //open files
     if ((fd1 = open(target_name, O_RDONLY)) < 0) {
         fprintf(stderr, "Warning: Can't open target file '%s' for reading: %s\nCan't check for duplicate\n", target_name, strerror(errno));
@@ -39,6 +36,7 @@ int compareFiles(char* path) {
         fprintf(stderr, "Warning: Can't open file '%s' for reading: %s\nCan't check if duplicate\n", path, strerror(errno));
         return -1;
     }
+    
     int n,m;
     //read to buffer
     while ((n = read(fd1, b1, buff_size)) != 0 && (m = read(fd2, b2, buff_size)) != 0) {
@@ -50,12 +48,9 @@ int compareFiles(char* path) {
             fprintf(stderr, "Error reading from target file '%s': %s\nCan't check if duplicate\n", path, strerror(errno));
             return -1;
         }
-        else if (memcmp(b1,b2,min(n,m))!=0) {
+        else if (memcmp(b1,b2,n) != 0) {
             return 0;
         }
-    }
-    if (memcmp(b1,b2,min(n,m))!=0) {
-        return 0;
     }
     return 1;
 }
@@ -103,9 +98,10 @@ void searchFiles(char *directory) {
             //get stats
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
+            dev_t dev = st.st_dev; //dev number
             
             //resolves to target
-            if (ino == target_ino) {
+            if (ino == target_ino && dev == target_dev) {
                 printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
             }
             //resolves to duplicate
@@ -126,12 +122,14 @@ void searchFiles(char *directory) {
             //get stats
             ino_t ino = st.st_ino; //inode number
             off_t size = st.st_size; //size in bytes
+            dev_t dev = st.st_dev; //dev number
             
             //get permissions
             mode_t mode = st.st_mode;
-            int o_permissions = (mode & S_IROTH); //'other' read permissions          //doesn't work? check with chmod?
+            int p = (mode & S_IROTH); //'other' read permissions
             char* perm_string;
-            if (o_permissions == 1) {
+//not correct!!!!
+            if (p == 1) {
                 perm_string = "OK READ by OTHER";
             }
             else {
@@ -139,7 +137,7 @@ void searchFiles(char *directory) {
             }
             
             //check for hardlink
-            if (ino == target_ino) {
+            if (ino == target_ino && dev == target_dev) {
                 printf("%s\tHARD LINK TO TARGET\t%s\n",path,perm_string);
             }
             
@@ -176,6 +174,8 @@ int main(int argc, char**argv) {
     }
     target_ino = st.st_ino;
     target_size = st.st_size;
+    target_dev = st.st_dev;
+    
     //nlink_t links = st.st_nlink;
     //printf("Target inode number:%llu\nTarget file size:%lld\nTarget nlink:%hu\n",target_ino,target_size,links);
     searchFiles(starting_directory);
