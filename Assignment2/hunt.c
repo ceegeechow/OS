@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <limits.h>
 
 //Global Variables
 ino_t target_ino;
@@ -70,7 +71,7 @@ void searchFiles(char *directory) {
     while ((entry = readdir(dir)) != NULL) {
 
         //current path
-        char path[1024];
+        char path[PATH_MAX];
         sprintf(path, "%s/%s", directory, entry->d_name);
         
         //if entry is another directory, recursively search
@@ -84,7 +85,7 @@ void searchFiles(char *directory) {
         else if (entry->d_type == DT_LNK) {
             
             //find contents of link
-            char link[1024];
+            char link[PATH_MAX];
             if (readlink(path,link,sizeof(link)) < 0) {
                 fprintf(stderr, "Warning: Could check contents of symlink %s: %s\n", path, strerror(errno));
                 continue;
