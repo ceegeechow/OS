@@ -53,6 +53,17 @@ int compareFiles(char* path) {
             return 0;
         }
     }
+    //close files
+    int p;
+    if ((p = close(fd1)) != 0) {
+        fprintf(stderr, "Error closing target file: %s\n", strerror(errno));
+        return -1;
+    }
+    if ((p = close(fd2)) != 0) {
+        fprintf(stderr, "Error closing file '%s': %s\n", path, strerror(errno));
+        return -1;
+    }
+    
     return 1;
 }
 
@@ -75,7 +86,7 @@ void searchFiles(char *directory, int canTraverse) {
         
         //run stat on entry
         struct stat st;
-        if (stat(path,&st) < 0) {
+        if (lstat(path,&st) < 0) {
             fprintf(stderr, "Warning: Could not run stat on entry %s: %s\n", path, strerror(errno));
             continue;
         }
