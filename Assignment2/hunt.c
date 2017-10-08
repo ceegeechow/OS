@@ -4,7 +4,6 @@
 //  10/8/17
 
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <errno.h>
@@ -58,7 +57,7 @@ int compareFiles(char* path) {
 }
 
 //Recursive searching function
-void searchFiles(char *directory) {
+void searchFiles(char *directory, int canTraverse) {
     
     DIR *dir;
     struct dirent *entry;
@@ -74,15 +73,27 @@ void searchFiles(char *directory) {
         char path[PATH_MAX];
         sprintf(path, "%s/%s", directory, entry->d_name);
         
+        //run stat on entry
+        struct stat st;
+        if (stat(path,&st) < 0) {
+            fprintf(stderr, "Warning: Could not run stat on entry %s: %s\n", path, strerror(errno));
+            continue;
+        }
+        mode_t mode = st.st_mode;
+        ino_t ino = st.st_ino;
+        off_t size = st.st_size;
+        dev_t dev = st.st_dev;
+        
         //if entry is another directory, recursively search
-        if (entry->d_type == DT_DIR) {
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        if ((mode & S_IFMT) == S_IFDIR) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
                 continue;
-            searchFiles(path);
+            }
+            searchFiles(path, ((mode & S_IXOTH) == S_IXOTH) && canTraverse);
         }
   
         //symlink handling
-        else if (entry->d_type == DT_LNK) {
+        else if ((mode & S_IFMT) == S_IFLNK) {
             
             //find contents of link
             char link[PATH_MAX];
@@ -92,18 +103,18 @@ void searchFiles(char *directory) {
             }
             
             //run stat on link
-            struct stat st;
-            if (stat(link,&st) < 0) {
+            struct stat st2;
+            if (stat(link,&st2) < 0) {
                 fprintf(stderr, "Warning: Could not run stat on contents of symlink %s (%s): %s\n", path, link, strerror(errno));
                 continue;
             }
 
-            mode_t mode = st.st_mode;
-            ino_t ino = st.st_ino;
-            off_t size = st.st_size;
-            dev_t dev = st.st_dev;
+            mode_t mode = st2.st_mode;
+            ino_t ino = st2.st_ino;
+            off_t size = st2.st_size;
+            dev_t dev = st2.st_dev;
             
-            if ((mode & S_IFREG) != 0) {
+            if ((mode & S_IFMT) == S_IFREG) {
                 //resolves to target
                 if (ino == target_ino && dev == target_dev) {
                     printf("%s\tSYMLINK RESOLVES TO TARGET\n",path);
@@ -119,24 +130,11 @@ void searchFiles(char *directory) {
             
         }
         //regular file handling
-        else if (entry->d_type == DT_REG) {
-            
-            //run stat on entry
-            struct stat st;
-            if (stat(path,&st) < 0) {
-                fprintf(stderr, "Warning: Could not run stat on file %s: %s\n", path, strerror(errno));
-                continue;
-            }
+        else if ((mode & S_IFMT) == S_IFREG) {
 
-            ino_t ino = st.st_ino;
-            off_t size = st.st_size;
-            dev_t dev = st.st_dev;
-            
-            //get permissions
-            mode_t mode = st.st_mode;
             char* perm_string;
 
-            if ((mode & S_IROTH) != 0) {
+            if ((mode & S_IROTH) != 0 && canTraverse) {
                 perm_string = "OK READ by OTHER";
             }
             else {
@@ -162,7 +160,7 @@ void searchFiles(char *directory) {
     closedir(dir);
 }
 
-//main loop
+//main function
 int main(int argc, char**argv) {
     
     if (argc != 3) {
@@ -174,21 +172,32 @@ int main(int argc, char**argv) {
     char* starting_directory = argv[2];
     
     DIR* dir;
-    struct stat st;
+    struct stat st, st_dir;
+    int t;
     
     if (stat(target_name,&st) < 0) {
         fprintf(stderr, "FATAL ERROR: Could not run stat on target file '%s': %s\n", target_name, strerror(errno));
         return -1;
     }
-    else if (!(dir = opendir(starting_directory))) {
+    if (!(dir = opendir(starting_directory))) {
         fprintf(stderr, "FATAL ERROR: Could not open directory '%s': %s\n", starting_directory, strerror(errno));
         return -1;
     }
+    if (stat(starting_directory,&st_dir) < 0) {
+        fprintf(stderr, "Warning: Could not run stat on directory '%s': %s\nCan't determine traversal permissions\n", starting_directory, strerror(errno));
+        t = 0; //assume others can't traverse
+        
+    }
+    else {
+        mode_t mode = st_dir.st_mode;
+        t = (mode & S_IXOTH) == S_IXOTH; //traversal permissions of starting directory
+    }
+    
     target_ino = st.st_ino;
     target_size = st.st_size;
     target_dev = st.st_dev;
     
-    searchFiles(starting_directory);
+    searchFiles(starting_directory,t);
     
     return 0;
 }
