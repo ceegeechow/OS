@@ -20,9 +20,7 @@ char* target_name;
 const int buff_size = BUFSIZ;
 
 //Function to compare contents of files
-//returns 1 if identical
-//returns 0 if not identical
-//returns -1 on error
+//returns 1 if identical, 0 if not identical, -1 on error
 int compareFiles(char* path) {
     
     int fd1, fd2;
