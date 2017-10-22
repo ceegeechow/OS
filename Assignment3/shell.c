@@ -82,7 +82,7 @@ void procLine(char* line)
 
 int main()
 {
-    char* line;    
+    char* line;
     while (1)
     {
         printf("> ");
