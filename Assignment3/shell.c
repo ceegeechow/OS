@@ -8,109 +8,101 @@
 #include <errno.h>
 #include <fcntl.h>
 
-///////////////////////////////////////////////////////////////
-//  Globals
-///////////////////////////////////////////////////////////////
-
-int e_status = -1; // exit status
-char** command[BUFSIZ];
-
-///////////////////////////////////////////////////////////////
-//  Built-in commands
-///////////////////////////////////////////////////////////////
+int status = -1; // exit status of last spawned child
+char* command[BUFSIZ];
 
 int cd()
 {
     if (command[1] == NULL)
     {
-        fprintf(stderr, "Error: can't cd, no path specified");
+        fprintf(stderr, "Error: can't cd, no path specified\n");
         return -1;
     }
-    if (chdir(command[1] < 0))
+    if (chdir(command[1]) < 0)
     {
-        fprintf(stderr, "Error: can't cd into directory '%s': %s", command[1], strerror(errno));
+        fprintf(stderr, "Error: can't cd into directory '%s': %s\n", command[1], strerror(errno));
         return -1;
     }
     return 0;
 }
 
-int exit()
-{                           //close open file descriptors? call the actual exit()???
+int ex()
+{
     if (command[1] != NULL)
     {
-        return command[1];
+        exit(atoi(command[1])); //exit() or _exit()???
     }
-    return e_status;
+    exit(status);
 }
-
-///////////////////////////////////////////////////////////////
-//  Supporting functions
-///////////////////////////////////////////////////////////////
 
 void procLine(char* line)
 {
-    char* d = " \t";
+    char* d = " \t\n";
     char* token = strtok(line,d);
-    int i = 0;
+    int arg_num = 0;
     while (token != NULL)
     {
-        command[i] = token;
-        i++;
+        command[arg_num] = token;
+        arg_num++;
         token = strtok(NULL,d);
     }
-    switch (command[0])
+    if (strcmp(command[0],"cd") == 0)
     {
-        case "cd":
-            cd();
-            break;
-            
-        case "exit":
-            exit();
-            
-        default:
-            if (command[0][0] != '#') {
-                execute();
-            }
-            break;
+        cd();
     }
-}
-
-int execute()
-{
-    int pid = fork();
-    switch (pid)
+    else if (strcmp(command[0],"exit") == 0)
     {
-        case -1:
-            fprintf(stderr,"Error forking: %s", strerror(errno)); //more info??
+        ex();
+    }
+    else if (command[0][0] != '#')
+    {
+        pid_t pid = fork();
         
-        case 0:            
-            //e_status = exec(needs filling in);
-            break;
-            
-        default:
-            //wait(pid);
-            break;
+        switch (pid)
+        {
+            case -1:
+                fprintf(stderr,"Error forking: %s\n", strerror(errno)); //more info??
+                
+            case 0:
+                if (execvp(command[0],command) < 0)
+                {
+                    fprintf(stderr,"Error executing command '%s': %s\n", command[0], strerror(errno));
+                }
+                break;
+                
+            default:
+                if (wait(&status) < 0) //waitpid(pid,&status,flags????)
+                {
+                    fprintf(stderr,"Error waiting for child (executing %s): %s\n", command[0], strerror(errno));
+                }
+                break;
+        }
     }
 }
 
-///////////////////////////////////////////////////////////////
-//  main loop
-///////////////////////////////////////////////////////////////
-
-int main() {
-    
-    char* line[BUFSIZ];
-    
-    while (true)
+int main()
+{
+    char* line;    
+    while (1)
     {
-        if (fgets(line, BUFSIZ, stdin) != NULL || feof(stdin) == 0)
+        printf("> ");
+        if (fgets(line, BUFSIZ, stdin) != NULL)
         {
+            if (strcmp(line,"\n") == 0)
+            {
+                continue;
+            }
             procLine(line);
+        }
+        else if (feof(stdin) == 0)
+        {
+            fprintf(stderr, "Error reading command from stdin: %s\n", strerror(errno));
         }
         else
         {
-            fprintf(stderr, "Error reading command from stdin: %s", strerror(errno));
+            break;
         }
     }
-    return exit();
+    printf("\n");
+    ex();
 }
