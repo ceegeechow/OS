@@ -14,8 +14,6 @@
 
 int e_status = -1; // exit status
 char** command[BUFSIZ];
-char* delimit = " \t"; // whitespace delimeters
-
 
 ///////////////////////////////////////////////////////////////
 //  Built-in commands
@@ -37,7 +35,7 @@ int cd()
 }
 
 int exit()
-{
+{                           //close open file descriptors? call the actual exit()???
     if (command[1] != NULL)
     {
         return command[1];
@@ -49,14 +47,50 @@ int exit()
 //  Supporting functions
 ///////////////////////////////////////////////////////////////
 
-void parseLine()
+void procLine(char* line)
 {
-    
+    char* d = " \t";
+    char* token = strtok(line,d);
+    int i = 0;
+    while (token != NULL)
+    {
+        command[i] = token;
+        i++;
+        token = strtok(NULL,d);
+    }
+    switch (command[0])
+    {
+        case "cd":
+            cd();
+            break;
+            
+        case "exit":
+            exit();
+            
+        default:
+            if (command[0][0] != '#') {
+                execute();
+            }
+            break;
+    }
 }
 
 int execute()
 {
-    
+    int pid = fork();
+    switch (pid)
+    {
+        case -1:
+            fprintf(stderr,"Error forking: %s", strerror(errno)); //more info??
+        
+        case 0:            
+            //e_status = exec(needs filling in);
+            break;
+            
+        default:
+            //wait(pid);
+            break;
+    }
 }
 
 ///////////////////////////////////////////////////////////////
@@ -71,8 +105,7 @@ int main() {
     {
         if (fgets(line, BUFSIZ, stdin) != NULL || feof(stdin) == 0)
         {
-            parseLine(line);
-            e_status = execute(command);
+            procLine(line);
         }
         else
         {
