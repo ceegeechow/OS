@@ -12,7 +12,7 @@
 
 int status = -1;
 char* command[BUFSIZ];
-char* IOcommands[BUFSIZ];
+char* IOcommands[BUFSIZ]; //smaller???
 
 int cd()
 {
@@ -65,22 +65,87 @@ int isRedir(char* arg)
 
 int redir()
 {
+    int fd;
+    char* filename;
     for (int i = 0; IOcommands[i] != NULL; i++)
     {
-        fprintf(stderr,"IOcommands[%d]",i);
-        fprintf(stderr,": %s\n", IOcommands[i]);
+        int j = isRedir(IOcommands[i]);
         switch (isRedir(IOcommands[i]))
         {
             case 1:
-                
+                if ((fd=open(&IOcommands[i][1],O_RDONLY,0666))<0)
+                {
+                    fprintf(stderr,"Can’t open file %s for reading: %s",&IOcommands[i][1],strerror(errno));
+                    return -1;
+                }
+                if (dup2(fd,1) < 0) {
+                    fprintf(stderr, "Can’t dup2 %s to stdin: %s", &IOcommands[i][1], strerror(errno));
+                    return -1;
+                }
+                if (close(fd) != 0) {
+                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][1], strerror(errno));
+                    return -1;
+                }
                 break;
             case 2:
+                if ((fd=open(&IOcommands[i][1],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
+                {
+                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][1],strerror(errno));
+                    return -1;
+                }
+                if (dup2(fd,1) < 0) {
+                    fprintf(stderr, "Can’t dup2 %s to stdout: %s\n", &IOcommands[i][1], strerror(errno));
+                    return -1;
+                }
+                if (close(fd) != 0) {
+                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][1], strerror(errno));
+                    return -1;
+                }
                 break;
             case 3:
+                if ((fd=open(&IOcommands[i][2],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
+                {
+                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][2],strerror(errno));
+                    return -1;
+                }
+                if (dup2(fd,2) < 0) {
+                    fprintf(stderr, "Can’t dup2 %s to stderr: %s\n", &IOcommands[i][2], strerror(errno));
+                    return -1;
+                }
+                if (close(fd) != 0) {
+                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][2], strerror(errno));
+                    return -1;
+                }
                 break;
             case 4:
+                if ((fd=open(&IOcommands[i][2],O_CREAT|O_APPEND|O_WRONLY,0666))<0)
+                {
+                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][2],strerror(errno));
+                    return -1;
+                }
+                if (dup2(fd,1) < 0) {
+                    fprintf(stderr, "Can’t dup2 %s to stdout: %s\n", &IOcommands[i][2], strerror(errno));
+                    return -1;
+                }
+                if (close(fd) != 0) {
+                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][2], strerror(errno));
+                    return -1;
+                }
                 break;
             case 5:
+                if ((fd=open(&IOcommands[i][2],O_CREAT|O_APPEND|O_WRONLY,0666))<0)
+                {
+                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][3],strerror(errno));
+                    return -1;
+                }
+                if (dup2(fd,2) < 0) {
+                    fprintf(stderr, "Can’t dup2 %s to stderr: %s", &IOcommands[i][3], strerror(errno));
+                    return -1;
+                }
+                if (close(fd) != 0) {
+                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][3], strerror(errno));
+                    return -1;
+                }
                 break;
             default:
                 return -1;
@@ -125,8 +190,6 @@ void procLine(char* line)
     //check for comment
     else if (command[0][0] != '#')
     {
-        //redirect IO if necessary
-        redir();
         int pid;
         //start timing execution (real time)
         gettimeofday(&start, NULL);
@@ -136,6 +199,8 @@ void procLine(char* line)
                 fprintf(stderr,"Error forking: %s\n", strerror(errno));
                 
             case 0: //child
+                //redirect IO if necessary
+                redir();
                 if (execvp(command[0],command) < 0)
                 {
                     fprintf(stderr,"Error executing command '%s': %s\n", command[0], strerror(errno));
