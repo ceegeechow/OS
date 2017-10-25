@@ -67,88 +67,64 @@ int redir()
 {
     int fd;
     char* filename;
+    char* std_stream;
+    char* mode = "writing";
+    int std_fd;
+    int offset;
+    int flags;
+    
     for (int i = 0; IOcommands[i] != NULL; i++)
     {
-        int j = isRedir(IOcommands[i]);
         switch (isRedir(IOcommands[i]))
         {
             case 1:
-                if ((fd=open(&IOcommands[i][1],O_RDONLY,0666))<0)
-                {
-                    fprintf(stderr,"Can’t open file %s for reading: %s",&IOcommands[i][1],strerror(errno));
-                    return -1;
-                }
-                if (dup2(fd,1) < 0) {
-                    fprintf(stderr, "Can’t dup2 %s to stdin: %s", &IOcommands[i][1], strerror(errno));
-                    return -1;
-                }
-                if (close(fd) != 0) {
-                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][1], strerror(errno));
-                    return -1;
-                }
+                std_stream = "stdin";
+                std_fd = 0;
+                offset = 1;
+                flags = O_RDONLY;
+                mode = "reading";
                 break;
             case 2:
-                if ((fd=open(&IOcommands[i][1],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
-                {
-                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][1],strerror(errno));
-                    return -1;
-                }
-                if (dup2(fd,1) < 0) {
-                    fprintf(stderr, "Can’t dup2 %s to stdout: %s\n", &IOcommands[i][1], strerror(errno));
-                    return -1;
-                }
-                if (close(fd) != 0) {
-                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][1], strerror(errno));
-                    return -1;
-                }
+                std_stream = "stdout";
+                std_fd = 1;
+                offset = 1;
+                flags = O_CREAT|O_TRUNC|O_WRONLY;
                 break;
             case 3:
-                if ((fd=open(&IOcommands[i][2],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
-                {
-                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][2],strerror(errno));
-                    return -1;
-                }
-                if (dup2(fd,2) < 0) {
-                    fprintf(stderr, "Can’t dup2 %s to stderr: %s\n", &IOcommands[i][2], strerror(errno));
-                    return -1;
-                }
-                if (close(fd) != 0) {
-                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][2], strerror(errno));
-                    return -1;
-                }
+                std_stream = "stderr";
+                std_fd = 2;
+                offset = 2;
+                flags = O_CREAT|O_TRUNC|O_WRONLY;
                 break;
             case 4:
-                if ((fd=open(&IOcommands[i][2],O_CREAT|O_APPEND|O_WRONLY,0666))<0)
-                {
-                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][2],strerror(errno));
-                    return -1;
-                }
-                if (dup2(fd,1) < 0) {
-                    fprintf(stderr, "Can’t dup2 %s to stdout: %s\n", &IOcommands[i][2], strerror(errno));
-                    return -1;
-                }
-                if (close(fd) != 0) {
-                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][2], strerror(errno));
-                    return -1;
-                }
+                std_stream = "stdout";
+                std_fd = 1;
+                offset = 2;
+                flags = O_CREAT|O_APPEND|O_WRONLY;
                 break;
             case 5:
-                if ((fd=open(&IOcommands[i][2],O_CREAT|O_APPEND|O_WRONLY,0666))<0)
-                {
-                    fprintf(stderr,"Can’t open file %s for writing: %s\n",&IOcommands[i][3],strerror(errno));
-                    return -1;
-                }
-                if (dup2(fd,2) < 0) {
-                    fprintf(stderr, "Can’t dup2 %s to stderr: %s", &IOcommands[i][3], strerror(errno));
-                    return -1;
-                }
-                if (close(fd) != 0) {
-                    fprintf(stderr, "Error closing file '%s': %s\n", &IOcommands[i][3], strerror(errno));
-                    return -1;
-                }
+                std_stream = "stderr";
+                std_fd = 2;
+                offset = 3;
+                flags = O_CREAT|O_APPEND|O_WRONLY;
                 break;
             default:
                 return -1;
+        }
+        filename = &IOcommands[i][offset];
+
+        if ((fd=open(filename,flags,0666)) < 0)
+        {
+            fprintf(stderr,"Can’t open file %s for %s: %s\n",filename,mode,strerror(errno));
+            return -1;
+        }
+        if (dup2(fd,std_fd) < 0) {
+            fprintf(stderr, "Can’t dup2 %s to %s: %s\n", filename, std_stream, strerror(errno));
+            return -1;
+        }
+        if (close(fd) != 0) {
+            fprintf(stderr, "Error closing file '%s': %s\n", filename, strerror(errno));
+            return -1;
         }
     }
     return 0;
