@@ -10,9 +10,15 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+//problems with cwd (ls and pwd sometimes don't work)
+//IO issues (stderr doesn't work, pretty version doesn't work)
+//exiting correctly?
+//always echos 0 if not given a value
+//make io commands global? make command local?
+
 int status = -1;
-char* command[BUFSIZ];
-char* IOcommands[BUFSIZ]; //smaller???
+char* command[BUFSIZ];//smaller???
+char* IOcommands[BUFSIZ];
 
 int cd()
 {
@@ -75,6 +81,7 @@ int redir()
     
     for (int i = 0; IOcommands[i] != NULL; i++)
     {
+        fprintf(stderr, "io redirect: %s\n", IOcommands[i]);
         switch (isRedir(IOcommands[i]))
         {
             case 1:
@@ -140,6 +147,7 @@ void procLine(char* line)
     struct timeval start;
     struct timeval stop;
     
+    
     //parse non-IO redirection arguments
     while (token != NULL && isRedir(token) == 0)
     {
@@ -196,6 +204,13 @@ void procLine(char* line)
                 break;
         }
     }
+    //clear command buffers
+    for (int i = 0; i < ac1; i++) {
+        command[i] = NULL;
+    }
+    for (int j = 0; j < ac2; j++) {
+        IOcommands[j] = NULL;
+    }
 }
 
 int main()
@@ -203,6 +218,8 @@ int main()
     char* line;
     while (1)
     {
+//        fprintf(stderr,"contents of command: %s, %s, %s\n", command[0], command[1], command[2]);
+//        fprintf(stderr,"contents of IOcommand: %s, %s, %s\n", IOcommands[0], IOcommands[1], IOcommands[2]);
         printf("> ");
         if (fgets(line, BUFSIZ, stdin) != NULL)
         {
