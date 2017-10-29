@@ -10,15 +10,13 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-//problems with cwd (ls and pwd sometimes don't work)
-//IO issues (stderr doesn't work, pretty version doesn't work)
 //exiting correctly?
 //always echos 0 if not given a value
-//make io commands global? make command local?
+//more elegant way to parse/clear buffers?
 
 int status = -1;
 char* command[BUFSIZ];//smaller???
-char* IOcommands[BUFSIZ];
+char* IO_buff[BUFSIZ];
 
 int cd()
 {
@@ -58,7 +56,7 @@ int isRedir(char* arg)
         }
         return 2; // >filename: redirect stdout (with truncate)
     }
-    else if (arg[0] == '2' && arg[0] == '>')
+    else if (arg[0] == '2' && arg[1] == '>')
     {
         if (arg[2] == '>')
         {
@@ -71,18 +69,13 @@ int isRedir(char* arg)
 
 int redir()
 {
-    int fd;
-    char* filename;
-    char* std_stream;
+    char* filename, *std_stream;
     char* mode = "writing";
-    int std_fd;
-    int offset;
-    int flags;
+    int fd, std_fd, offset, flags;
     
-    for (int i = 0; IOcommands[i] != NULL; i++)
+    for (int i = 0; IO_buff[i] != NULL; i++)
     {
-        fprintf(stderr, "io redirect: %s\n", IOcommands[i]);
-        switch (isRedir(IOcommands[i]))
+        switch (isRedir(IO_buff[i]))
         {
             case 1:
                 std_stream = "stdin";
@@ -118,7 +111,7 @@ int redir()
             default:
                 return -1;
         }
-        filename = &IOcommands[i][offset];
+        filename = &IO_buff[i][offset];
 
         if ((fd=open(filename,flags,0666)) < 0)
         {
@@ -156,9 +149,9 @@ void procLine(char* line)
         token = strtok(NULL,d);
     }
     //parse IO redirection arguments
-    while (token != NULL && isRedir(token) != 0)           //can this be better?
+    while (token != NULL && isRedir(token) != 0)
     {
-        IOcommands[ac2] = token;
+        IO_buff[ac2] = token;
         ac2++;
         token = strtok(NULL,d);
     }
@@ -181,10 +174,14 @@ void procLine(char* line)
         {
             case -1: //error
                 fprintf(stderr,"Error forking: %s\n", strerror(errno));
+                break;
                 
             case 0: //child
                 //redirect IO if necessary
-                redir();
+                if (redir() < 0) {
+                    fprintf(stderr,"Error establishing IO redirection, command not launched\n");
+                    _exit(-1);
+                }
                 if (execvp(command[0],command) < 0)
                 {
                     fprintf(stderr,"Error executing command '%s': %s\n", command[0], strerror(errno));
@@ -204,13 +201,13 @@ void procLine(char* line)
                 break;
         }
     }
+    
     //clear command buffers
-    for (int i = 0; i < ac1; i++) {
+    for (int i = 0; i < ac1; i++)
         command[i] = NULL;
-    }
-    for (int j = 0; j < ac2; j++) {
-        IOcommands[j] = NULL;
-    }
+    
+    for (int j = 0; j < ac2; j++)
+        IO_buff[j] = NULL;
 }
 
 int main()
@@ -218,8 +215,6 @@ int main()
     char* line;
     while (1)
     {
-//        fprintf(stderr,"contents of command: %s, %s, %s\n", command[0], command[1], command[2]);
-//        fprintf(stderr,"contents of IOcommand: %s, %s, %s\n", IOcommands[0], IOcommands[1], IOcommands[2]);
         printf("> ");
         if (fgets(line, BUFSIZ, stdin) != NULL)
         {
