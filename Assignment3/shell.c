@@ -33,10 +33,9 @@ int ex()
 {
     if (command[1] != NULL)
     {
-        exit(atoi(command[1]));
+        _exit(atoi(command[1]));
     }
-    //fprintf(stderr, "exit status: %d\t %d\t%d\n", status, status&0377, 0377);
-    exit(status);
+    _exit(status);
 }
 
 int isRedir(char* arg)
@@ -204,26 +203,20 @@ void procLine(char* line)
 int main(int argc, char* argv[])
 {
     FILE* input = stdin;
-    char* line;
-    if (argv[1] != NULL)
+    char* line = NULL;
+    size_t n = 0;
+    
+    if (argv[1] != NULL && (input = fopen(argv[1],"r")) == NULL)
     {
-        printf("arg found\n");
-        if ((input = fopen(argv[1],"r")) == NULL)
-        {
-            fprintf(stderr, "Error opening %s for reading: %s\nEntering regular shell mode\n", argv[1], strerror(errno));
-            input = stdin;
-        }
+        fprintf(stderr, "Error opening %s for reading: %s\nEntering regular shell mode\n", argv[1], strerror(errno));
+        input = stdin;
     }
-    else {
-        printf("no args\n");
-        
-    }
+    
     while (1)
     {
         printf("> ");
-        if (fgets(line, BUFSIZ, input) != NULL)
+        if (getline(&line, &n, input) != -1)
         {
-            printf("got line\n");
             if (strcmp(line,"\n") == 0)
                 continue;
             procLine(line);
