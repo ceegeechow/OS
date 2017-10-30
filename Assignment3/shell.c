@@ -10,12 +10,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-//exiting correctly?
-//always echos 0 if not given a value
-//more elegant way to parse/clear buffers?
-
 int status = -1;
-char* command[BUFSIZ];//smaller???
+char* command[BUFSIZ];
 char* IO_buff[BUFSIZ];
 
 int cd()
@@ -39,6 +35,7 @@ int ex()
     {
         exit(atoi(command[1]));
     }
+    //fprintf(stderr, "exit status: %d\t %d\t%d\n", status, status&0377, 0377);
     exit(status);
 }
 
@@ -137,9 +134,7 @@ void procLine(char* line)
     int ac1 = 0;
     int ac2 = 0;
     struct rusage ru;
-    struct timeval start;
-    struct timeval stop;
-    
+    struct timeval start, stop;
     
     //parse non-IO redirection arguments
     while (token != NULL && isRedir(token) == 0)
@@ -157,19 +152,17 @@ void procLine(char* line)
     }
     //check for built-in commands
     if (strcmp(command[0],"cd") == 0)
-    {
         cd();
-    }
+
     else if (strcmp(command[0],"exit") == 0)
-    {
         ex();
-    }
+
     //check for comment
     else if (command[0][0] != '#')
     {
         int pid;
-        //start timing execution (real time)
-        gettimeofday(&start, NULL);
+        gettimeofday(&start, NULL); //start timing execution (real time)
+        //fork, execute, and wait
         switch (pid = fork())
         {
             case -1: //error
@@ -177,8 +170,8 @@ void procLine(char* line)
                 break;
                 
             case 0: //child
-                //redirect IO if necessary
-                if (redir() < 0) {
+                if (redir() < 0) //redirect IO if necessary
+                {
                     fprintf(stderr,"Error establishing IO redirection, command not launched\n");
                     _exit(-1);
                 }
@@ -195,13 +188,11 @@ void procLine(char* line)
                     fprintf(stderr,"Error waiting for child (executing %s): %s\n", command[0], strerror(errno));
                     break;
                 }
-                //stop timing once wait returns
-                gettimeofday(&stop, NULL);
+                gettimeofday(&stop, NULL); //stop timing once wait returns
                 fprintf(stderr, "Process cosumed %ld.%.6d real seconds, %ld.%.6d user, %ld.%.6d system\n", stop.tv_sec - start.tv_sec, stop.tv_usec - start.tv_usec, ru.ru_utime.tv_sec, ru.ru_utime.tv_usec, ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
                 break;
         }
     }
-    
     //clear command buffers
     for (int i = 0; i < ac1; i++)
         command[i] = NULL;
@@ -210,19 +201,34 @@ void procLine(char* line)
         IO_buff[j] = NULL;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    FILE* input = stdin;
     char* line;
+    if (argv[1] != NULL)
+    {
+        printf("arg found\n");
+        if ((input = fopen(argv[1],"r")) == NULL)
+        {
+            fprintf(stderr, "Error opening %s for reading: %s\nEntering regular shell mode\n", argv[1], strerror(errno));
+            input = stdin;
+        }
+    }
+    else {
+        printf("no args\n");
+        
+    }
     while (1)
     {
         printf("> ");
-        if (fgets(line, BUFSIZ, stdin) != NULL)
+        if (fgets(line, BUFSIZ, input) != NULL)
         {
+            printf("got line\n");
             if (strcmp(line,"\n") == 0)
                 continue;
             procLine(line);
         }
-        else if (feof(stdin) == 0)
+        else if (feof(input) == 0)
             fprintf(stderr, "Error reading command from stdin: %s\n", strerror(errno));
         else
             break;
