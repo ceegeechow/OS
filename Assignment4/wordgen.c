@@ -3,6 +3,7 @@
 
 //print same length words
 //prints same words every time (need to use seed?)
+//do i need to print how many words were generated?
 
 int main(int argc, char** argv)
 {
