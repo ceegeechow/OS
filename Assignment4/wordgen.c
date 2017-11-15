@@ -3,8 +3,6 @@
 #include <time.h>
 #include <string.h>
 
-//do i need to print how many words were generated?
-
 int main(int argc, char** argv)
 {
     int nc = 5; //max word length
@@ -24,5 +22,7 @@ int main(int argc, char** argv)
         free(word);
         wordcount--;
     }
+//do i need to print how many words were generated?
+
     return 0;
 }
