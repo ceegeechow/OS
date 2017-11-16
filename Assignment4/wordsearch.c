@@ -1,32 +1,29 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
-//#include <fcntl.h>
 #include <string.h>
 
 //split up into smaller funcitons?
 //include accepted/rejected words?
 //hashing?
 
-const int MAX_WORD = 30;
+const int MAX_WORD_LEN = 30;
+const int DICT_LEN = 30000;
 
 char* upper(char* str)
 {
-    for (int i = 0; i < sizeof(str); i++)
+    int i = 0;                              //???
+    for (; i < strlen(str); i++)
         str[i] = toupper(str[i]);
     return str;
 }
 
 int main(int argc, char** argv)
 {
-//    char*line = "hi";
-//    printf("%s\n", upper(argv[1]));
-//    
-//    printf("%s\n", upper(line));
-//    printf("%s\n", argv[1]);
     //open dictionary
     if (argc < 2)
     {
-        fprintf(stderr, "Fatal Error: No dictionary file specified\n");
+        fprintf(stderr, "No dictionary file specified\n");
         return -1;
     }
     FILE* pdict;
@@ -36,22 +33,21 @@ int main(int argc, char** argv)
         return -1;
     }
     //read dictionary/store in array
-    char** dict;                        //malloc?
+    char** dict = malloc(DICT_LEN);
+    char* line = malloc(MAX_WORD_LEN);
     int i = 0;
-    char* line;                     //malloc??
-    size_t n = 0;
-    while (getline(&line, &n, pdict) != -1)     //stores the newline --> bad!?
+    while (getline(&line, &MAX_WORD_LEN, pdict) != -1)     //doesnt store last newline
     {
-        printf("got line: %s\n", line);
         dict[i] = upper(line);
         i++;
     }
-    if (feof(stdin) == 0)           //necessary?
-    {
-        fprintf(stderr, "Error reading dictionary file: %s\n", strerror(errno));
-        return -1;
-    }
+//    if (!feof(stdin))           //necessary?
+//    {
+//        fprintf(stderr, "Error reading dictionary file: %s\n", strerror(errno));
+//        return -1;
+//    }
     //close dictionary
+    printf("hello, %d", dict[100][0]);    //by this point dictionary stores null terminators only
     if (fclose(pdict) != 0)
     {
         fprintf(stderr, "Error closing dictionary file '%s': %s\n", argv[1], strerror(errno));
@@ -59,17 +55,23 @@ int main(int argc, char** argv)
     }
     //check input for matches
     int matches = 0;
-                //shoud i use different getline vars?
-    while (getline(&line, &n, stdin) != -1 && feof(stdin) == 0)
-    {
+    char* buf = malloc(MAX_WORD_LEN);
+    while (getline(&buf, &MAX_WORD_LEN, stdin) != -1) //              && feof(stdin) == 0?
+    {       //fails here
+        
         for (int j = 0; j < i; j++)
         {
-            if (strcmp(dict[j], upper(line)) == 0)
-            {
-                fprintf(stdout, "%s", line);
-                matches++;
-            }
+            
+//            if (strcmp(dict[j], upper(buf)) == 0)
+//            {
+//                fprintf(stdout, "%s", buf);
+//                matches++;
+//            }
         }
     }
+    
+    free(dict);
+    free(line);
+    free(buf);
     return 0;
 }

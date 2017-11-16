@@ -5,20 +5,20 @@
 
 //prints the rest if ^D hit during "press RETURN for more"
 
-const int MAX_WORD = 30;
+const int MAX_WORD_LEN = 30;
 
 int main()
 {
     int lines = 0;
     //open terminal
     FILE* pt;
-    if ((pt = fopen("/dev/tty", "r+")) == NULL)     //use open???
+    if ((pt = fopen("/dev/tty", "r+")) == NULL)
     {
         fprintf(stderr, "Error opening terminal for reading and writing: %s\n", strerror(errno));
         return -1;
     }
-    char* line = malloc(MAX_WORD);
-    char* cont = malloc(MAX_WORD);             //initilize differently? malloc?
+    char* line = malloc(MAX_WORD_LEN);
+    char* cont = malloc(MAX_WORD_LEN);
     while (getline(&line, &MAX_WORD, stdin) != -1) //&& feof(pt) == 0?
     {
         fprintf(stdout, "%s", line);
@@ -26,7 +26,7 @@ int main()
         if (lines >= 23)
         {
             fprintf(stdout, "---Press RETURN for more---");
-            getline(&cont,&MAX_WORD,pt);
+            getline(&cont,&MAX_WORD_LEN,pt);
             if (cont[0] == 'q' || cont[0] == 'Q')
             {
                 //print "exited with q"??
@@ -34,7 +34,7 @@ int main()
             }
             lines = 0;
         }
-        memset(line,0,MAX_WORD);
+        memset(line,0,MAX_WORD_LEN);
     }
     free(line);
     //do we need to close terminal?
