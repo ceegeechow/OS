@@ -10,18 +10,15 @@ int main(int argc, char** argv)
     if (argc > 1)
         wordcount = atoi(argv[1]);
     srand((unsigned) time(NULL));
-    char* word = malloc(nc);            //malloc inside or outside?
+    char word[nc + 1];
     while (argc == 1 || wordcount > 0)
     {
         m = rand()%(nc-2)+3;
         for (int i = 0; i < m; i++)
             word[i] = rand()%26 + 65;
+        word[m] = '\0';
         fprintf(stdout, "%s\n", word);
-        memset(word,0,m);               //better way?
         wordcount--;
     }
-    free(word);
-//do i need to print how many words were generated?
-
     return 0;
 }
