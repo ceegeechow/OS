@@ -3,14 +3,9 @@
 #include <string.h>
 #include <errno.h>
 
-//prints the rest if ^D hit during "press RETURN for more"
-
-const int MAX_WORD_LEN = 30;
-
 int main()
 {
     int lines = 0;
-    //open terminal
     FILE* pt;
     if ((pt = fopen("/dev/tty", "r+")) == NULL)
     {
@@ -20,15 +15,14 @@ int main()
     size_t n = 0;
     char c;
     char* line = NULL;
-    while (getline(&line, &n, stdin) != -1) //&& feof(pt) == 0?
+    while (getline(&line, &n, stdin) != -1)
     {
         fprintf(stdout, "%s", line);
         lines++;
         if (lines >= 23)
         {
             fprintf(stdout, "---Press RETURN for more---");
-            c = getc(pt);
-            if (c == 'q' || c == 'Q') //or == 3?
+            if (getline(&line, &n, pt) == -1 || line[0] == 'q' || line[0] == 'Q')
             {
                 return 0;
             }
