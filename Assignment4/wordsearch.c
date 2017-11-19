@@ -3,17 +3,11 @@
 #include <errno.h>
 #include <string.h>
 
-//split up into smaller funcitons?
-//include accepted/rejected words?
-//hashing?
-
-const int MAX_WORD_LEN = 30;
-const int DICT_LEN = 30000;
+const int DICT_LEN = 300000;
 
 char* upper(char* str)
 {
-    int i = 0;                              //???
-    for (; i < strlen(str); i++)
+    for (int i = 0; i < strlen(str); i++)
         str[i] = toupper(str[i]);
     return str;
 }
@@ -34,20 +28,14 @@ int main(int argc, char** argv)
     }
     //read dictionary/store in array
     char** dict = malloc(DICT_LEN);
-    char* line = malloc(MAX_WORD_LEN);
     int i = 0;
-    while (getline(&line, &MAX_WORD_LEN, pdict) != -1)     //doesnt store last newline
+    size_t n = 0;
+    while (getline(&dict[i], &n, pdict) != -1)
     {
-        dict[i] = upper(line);
+        upper(dict[i]);
         i++;
     }
-//    if (!feof(stdin))           //necessary?
-//    {
-//        fprintf(stderr, "Error reading dictionary file: %s\n", strerror(errno));
-//        return -1;
-//    }
     //close dictionary
-    printf("hello, %d", dict[100][0]);    //by this point dictionary stores null terminators only
     if (fclose(pdict) != 0)
     {
         fprintf(stderr, "Error closing dictionary file '%s': %s\n", argv[1], strerror(errno));
@@ -55,23 +43,21 @@ int main(int argc, char** argv)
     }
     //check input for matches
     int matches = 0;
-    char* buf = malloc(MAX_WORD_LEN);
-    while (getline(&buf, &MAX_WORD_LEN, stdin) != -1) //              && feof(stdin) == 0?
-    {       //fails here
-        
+    n = 0;
+    char* buf = NULL;
+    while (getline(&buf, &n, stdin) != -1)
+    {
         for (int j = 0; j < i; j++)
         {
-            
-//            if (strcmp(dict[j], upper(buf)) == 0)
-//            {
-//                fprintf(stdout, "%s", buf);
-//                matches++;
-//            }
+            if (strcmp(dict[j], upper(buf)) == 0)
+            {
+                fprintf(stdout, "%s", buf);
+                matches++;
+            }
         }
     }
-    
-    free(dict);
-    free(line);
+    for (int k = 0; k < i; k++)
+        free(dict[k]);
     free(buf);
     return 0;
 }

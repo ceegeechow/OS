@@ -24,10 +24,12 @@ int main()
             fprintf(stdout, "---Press RETURN for more---");
             if (getline(&line, &n, pt) == -1 || line[0] == 'q' || line[0] == 'Q')
             {
+                free(line);
                 return 0;
             }
             lines = 0;
         }
     }
+    free(line);
     return 0;
 }
