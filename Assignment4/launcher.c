@@ -11,10 +11,6 @@ void redir(int fd_pipe, int fd_std)
         fprintf(stderr, "Can’t dup2 fd %d to fd %d: %s\n", fd_std, fd_pipe, strerror(errno));
         _exit(-1);
     }
-    if (close(fd_pipe) != 0) {
-        fprintf(stderr, "Error closing file descriptor %d: %s\n", fd_pipe, strerror(errno));
-        _exit(-1);
-    }
 }
 
 int main(int argc, char** argv)
@@ -45,8 +41,9 @@ int main(int argc, char** argv)
     }
     else if (pid == 0) //child - wordgen
     {
-        redir(pipe1fd[0], 1); //redirect stdout to input of first pipe
-        if (execlp("wordgen","wordgen",arg) < 0)
+        redir(pipe1fd[1], 1); //redirect stdout to input of first pipe
+        close(pipe1fd[0]); close(pipe1fd[1]); close(pipe2fd[0]); close(pipe2fd[1]);
+        if (execlp("./wordgen","./wordgen",argv[1],(char*)NULL) < 0)
         {
             fprintf(stderr,"Error executing wordgen: %s\n", strerror(errno));
             _exit(-1);
@@ -62,9 +59,10 @@ int main(int argc, char** argv)
         }
         else if (pid2 == 0) //child - wordsearch
         {
-            redir(pipe1fd[1], 0); //redirect stdin to output of first pipe
-            redir(pipe2fd[0], 1); //redirect stdout to input of second pipe
-            if (execlp("wordsearch","wordsearch","dict.txt") < 0)
+            redir(pipe1fd[0], 0); //redirect stdin to output of first pipe
+            redir(pipe2fd[1], 1); //redirect stdout to input of second pipe
+            close(pipe1fd[0]); close(pipe1fd[1]); close(pipe2fd[0]); close(pipe2fd[1]);
+            if (execlp("./wordsearch","./wordsearch","joey.txt",(char*)NULL) < 0)
             {
                 fprintf(stderr,"Error executing wordsearch: %s\n", strerror(errno));
                 _exit(-1);
@@ -80,8 +78,9 @@ int main(int argc, char** argv)
             }
             else if (pid3 == 0) //child - pager
             {
-                redir(pipe2fd[1], 0); //redirect stdin to output of second pipe
-                if (execlp("pager","pager") < 0)
+                redir(pipe2fd[0], 0); //redirect stdin to output of second pipe
+                close(pipe1fd[0]); close(pipe1fd[1]); close(pipe2fd[0]); close(pipe2fd[1]);
+                if (execlp("./pager","./pager",(char*)NULL) < 0)
                 {
                     fprintf(stderr,"Error executing pager: %s\n", strerror(errno));
                     _exit(-1);
@@ -89,14 +88,15 @@ int main(int argc, char** argv)
             }
         }
     }
+    close(pipe1fd[0]); close(pipe1fd[1]); close(pipe2fd[0]); close(pipe2fd[1]);
     int status = -1;
     int p;
     for (int i = 0; i < 3; i++)
     {
-    if ((p = wait(&status)) < 0)
-        fprintf(stderr,"Error waiting for child: %s\n", strerror(errno));
-    else
-        fprintf(stderr, "Child %d exited with status %d", p, status);
+        if ((p = wait(&status)) < 0)
+            fprintf(stderr,"Error waiting for child: %s\n", strerror(errno));
+        else
+            fprintf(stderr, "Child %d exited with status %d\n", p, status);
     }
     return 0;
 }
