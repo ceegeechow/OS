@@ -1,3 +1,6 @@
+//Camille Chow
+//ECE 357 PSET 4
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +16,6 @@ int main()
         return -1;
     }
     size_t n = 0;
-    char c;
     char* line = NULL;
     while (getline(&line, &n, stdin) != -1)
     {

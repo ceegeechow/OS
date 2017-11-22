@@ -1,3 +1,6 @@
+//Camille Chow
+//ECE 357 PSET 4
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/resource.h>

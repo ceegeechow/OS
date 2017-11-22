@@ -1,3 +1,6 @@
+//Camille Chow
+//ECE 357 PSET 4
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
