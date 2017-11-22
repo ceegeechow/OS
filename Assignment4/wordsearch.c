@@ -4,48 +4,8 @@
 #include <string.h>
 #include <signal.h>
 
-const int capacity = 300000;
+const int DICT_LEN = 300000;
 int matches = 0;
-//char* dict[capacity];
-//int taken[capacity];
-
-//int hash(char* key)
-//{
-//    int hashVal = 0;
-//    for (int i = 0; i < sizeof(key); i++)
-//        hashVal = 37*hashVal + key[i];
-//    hashVal %= capacity;
-//    
-//    if (hashVal < 0)
-//        hashVal += capacity;
-//    
-//    return hashVal;
-//}
-//
-//void insert(char* key)
-//{
-//    int p = hash(key);
-//    while (taken[p] == 1)
-//    {
-//        p++;
-//        p %= capacity;
-//    }
-//    dict[p] = key;
-//    taken[p] = 1;
-//}
-//
-//int findPos(char* key)
-//{
-//    int i = hash(key);
-//    while (taken[i] == 1)
-//    {
-//        if (dict[i] == key)
-//            return i;
-//        i++;
-//        i %= capacity;
-//    }
-//    return -1;
-//}
 
 char* upper(char* str)
 {
@@ -78,7 +38,7 @@ int main(int argc, char** argv)
         return -1;
     }
     //read dictionary/store in array
-    char** dict = malloc(capacity);
+    char** dict = malloc(DICT_LEN);
     int i = 0;
     size_t n = 0;
     while (getline(&dict[i], &n, pdict) != -1)
@@ -92,7 +52,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "Error closing dictionary file '%s': %s\n", argv[1], strerror(errno));
         return -1;
     }
-    //check input for matches
+    //check input for matches linearly
     n = 0;
     char* buf = NULL;
     while (getline(&buf, &n, stdin) != -1)
@@ -105,11 +65,6 @@ int main(int argc, char** argv)
                 matches++;
             }
         }
-//        if (findPos(buf) != -1)
-//        {
-//            fprintf(stdout, "%s", buf);
-//            matches++;
-//        }
     }
     fprintf(stderr, "Matched %d words\n", matches);
     for (int k = 0; k < i; k++)

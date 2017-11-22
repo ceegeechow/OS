@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <string.h>
 
-char* dictionary = "joey.txt";
+char* dictionary = "dict.txt"; //dictionary file for wordsearch
 
 void redir(int fd_pipe, int fd_std)
 {
