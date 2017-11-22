@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <string.h>
 
+char* dictionary = "joey.txt";
+
 void redir(int fd_pipe, int fd_std)
 {
     if (dup2(fd_pipe, fd_std) < 0) {
@@ -62,7 +64,7 @@ int main(int argc, char** argv)
             redir(pipe1fd[0], 0); //redirect stdin to output of first pipe
             redir(pipe2fd[1], 1); //redirect stdout to input of second pipe
             close(pipe1fd[0]); close(pipe1fd[1]); close(pipe2fd[0]); close(pipe2fd[1]);
-            if (execlp("./wordsearch","./wordsearch","joey.txt",(char*)NULL) < 0)
+            if (execlp("./wordsearch","./wordsearch",dictionary,(char*)NULL) < 0)
             {
                 fprintf(stderr,"Error executing wordsearch: %s\n", strerror(errno));
                 _exit(-1);
