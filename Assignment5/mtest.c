@@ -162,8 +162,6 @@ void test6()
     int fd;
     
     char* map;
-    //open test file and get stats
-    //fd = openfile("test6.txt", &sb);
     exit(0);
 }
 
