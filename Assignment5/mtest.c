@@ -4,12 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/types.h>
 
 //is closemap necessary???
 
@@ -24,10 +25,13 @@ int openfile(char* name, int size)
         exit(255);
     }
     //write to file
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)      //check for partial writes???
         fprintf(fs, "A");
-    //get file descriptor
-    fd = fileno(fs);
+    if ((fd = fileno(fs)) < 0)
+    {
+        fprintf(stderr, "Error getting file descriptor: %s\n", strerror(errno));
+        exit(255);
+    }
     return fd;
 }
 
@@ -55,7 +59,6 @@ void hand1(int sig)
 
 void test1()
 {
-    fprintf(stderr, "Executing test 1...\n");
     int fd;
     int file_size = 5000; //only works for at least 4097???
     char* map;
@@ -105,35 +108,56 @@ void test2and3(int testno)
     char buf[1];
     lseek(fd, 50, SEEK_SET);
     read(fd,buf,1);
+    closemap(map,file_size,fd);
     if (buf[0] == 'B')
     {
         fprintf(stderr, "success!\n");
-        closemap(map,file_size,fd);
         exit(0);
     }
-    else
-    {
-        fprintf(stderr, "fail :(\n");
-        closemap(map,file_size,fd);
-        exit(1);
-    }
+    fprintf(stderr, "fail :(\n");
+    exit(1);
 }
 
 void test4()
 {
     int fd;
-    
+    int file_size = 5000;
     char* map;
+    struct stat buf;
     //open test file and get stats
-    //fd = openfile("test4.txt", &sb);
-    //change file size (lseek and write)
-    
-    //mmap
-    
-    //write just beyond last byte
-    
-    //stat again???
-    
+    fd = openfile("test4.txt", file_size);
+    //call mmap
+    if ((map = mmap(NULL, file_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
+    {
+        fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    //find initial size
+    if (fstat(fd,&buf) < 0)
+    {
+        fprintf(stderr, "error stat-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    off_t old = buf.st_size;
+    fprintf(stderr, "file size: %lld\n", old);
+    //write beyond last byte
+    fprintf(stderr, "writing 'B' beyond last byte\n");
+    map[file_size+1] = 'B';
+    //find new size
+    if (fstat(fd,&buf) < 0)
+    {
+        fprintf(stderr, "error stat-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    off_t new = buf.st_size;
+    fprintf(stderr, "new file size: %lld\n", new);
+    closemap(map,file_size,fd);
+    if (old == new)
+    {
+        fprintf(stderr, "fail :(\n");
+        exit(1);
+    }
+    fprintf(stderr, "success!\n");
     exit(0);
 }
 
@@ -167,6 +191,12 @@ void test6()
 
 int main(int argc, char**argv)
 {
+//    FILE* fs = fopen("test.txt", "w+");
+//    for (int i = 0; i < 5000; i++)      //check for partial writes???
+//        fprintf(fs, "A");
+//    struct stat buf;
+//    stat("test.txt", &buf);
+//    fprintf(stderr, "size: %lld\n", buf.st_size);
     if (argv[1] == NULL)
     {
         fprintf(stderr, "Please specify test number\n");
