@@ -7,32 +7,34 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-//#include <unistd.h>
+#include <unistd.h>
+#include <sys/types.h>
 
-int openstat(char* name, struct stat* sb)
+//is closemap necessary???
+
+int openfile(char* name, int size)
 {
+    FILE* fs;
     int fd;
     //open test file
-    if ((fd = open(name, O_RDWR|O_CREAT|O_TRUNC, 0666)) < 0)  //are these permissions ok?
+    if ((fs = fopen(name, "w+")) < 0)
     {
         fprintf(stderr, "Could not open test file for reading and writing: %s\n", strerror(errno));
         exit(255);
     }
-    //get stats
-    if (fstat(fd, &sb) < 0)
-    {
-        fprintf(stderr, "Error stat-ing test file: %s\n", strerror(errno));
-        exit(255);
-    }
+    //write to file
+    for (int i = 0; i < size; i++)
+        fprintf(fs, "A");
+    //get file descriptor
+    fd = fileno(fs);
     return fd;
 }
 
-void closemap(void* map, struct stat* sb, int fd)
+void closemap(char* map, int size, int fd)
 {
     //unmap
-    if (munmap(map, sb.st_size) < 0)
+    if (munmap(map, size) < 0)
     {
         fprintf(stderr, "Error unmapping mmap: %s\n", strerror(errno));
         exit(255);
@@ -45,90 +47,85 @@ void closemap(void* map, struct stat* sb, int fd)
     }
 }
 
+void hand1(int sig)
+{
+    fprintf(stderr, "Signal \"%s\" received\n", strsignal(sig));
+    exit(sig);
+}
+
 void test1()
 {
-    fprintf(stderr, "Executing test 1:\n");
+    fprintf(stderr, "Executing test 1...\n");
     int fd;
-    struct stat sb;
-    void* map;
+    int file_size = 5000; //only works for at least 4097???
+    char* map;
     //set signal handlers for signals 1 through 31
     for (int i = 1; i < 32; i++)
         signal(i,hand1);
     //open test file and get stats
-    fd = openstat("test1.txt", &sb);
+    fd = openfile("test1.txt", file_size);
     //call mmap
-    if ((map = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) < 0)
-        //are these the right arguments??? shared/private, len, offset??
+    if ((map = mmap(NULL, file_size, PROT_READ, MAP_SHARED, fd, 0)) < 0)
     {
         fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
         exit(255);
     }
     //attempt to write
-    //??????????????????????????????
-    //write sys call or just map[0] = blah?
-
-    closemap(map,sb,fd);
+    fprintf(stderr, "map[3]: %c\n", map[3]);
+    fprintf(stderr, "writing to map[3]\n");
+    map[3] = 'A';
+    closemap(map,file_size,fd); //do i need this?
     exit(0);
 }
 
-void hand1(int sig)
-{
-    fprintf(stderr, "Signal %s received\n", strsignal(sig));
-    exit(sig);
-}
-
-void test2()
+void test2and3(int testno)
 {
     int fd;
-    struct stat sb;
-    void* map;
+    int file_size = 5000;
+    char* map;
+    char* name = "test2.txt";
+    int flag = MAP_SHARED;
+    if (testno == 3)
+    {
+        name = "test3.txt";
+        flag = MAP_PRIVATE;
+    }
     //open test file and get stats
-    fd = openstat("test2.txt", &sb);
+    fd = openfile(name, file_size);
     //call mmap
-    if ((map = mmap(NULL, sb.st_size, PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
-        //are these the right arguments??? shared/private, len, offset??
+    if ((map = mmap(NULL, file_size, PROT_READ|PROT_WRITE, flag, fd, 0)) < 0)
     {
         fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
         exit(-1);
     }
     //write to memory
-    
+    fprintf(stderr, "writing 'B' to map[50]\n");
+    map[50] = 'B';
     //check memory
-    
-    closemap(map,sb,fd);
-    exit(0);
-}
-
-void test3()
-{
-    int fd;
-    struct stat sb;
-    void* map;
-    //open test file and get stats
-    fd = openstat("test3.txt", &sb);
-    //call mmap
-    if ((map = mmap(NULL, sb.st_size, PROT_WRITE, MAP_PRIVATE, fd, 0)) < 0)
-        //are these the right arguments??? shared/private, len, offset??
+    char buf[1];
+    lseek(fd, 50, SEEK_SET);
+    read(fd,buf,1);
+    if (buf[0] == 'B')
     {
-        fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
-        exit(-1);
+        fprintf(stderr, "success!\n");
+        closemap(map,file_size,fd);
+        exit(0);
     }
-    //write to memory
-    
-    //check memory
-    
-
-    closemap(map,sb,fd);
-    exit(0);
+    else
+    {
+        fprintf(stderr, "fail :(\n");
+        closemap(map,file_size,fd);
+        exit(1);
+    }
 }
 
 void test4()
 {
     int fd;
-    struct stat sb;
-    void* map;
+    
+    char* map;
     //open test file and get stats
-    fd = openstat("test4.txt", &sb);
+    //fd = openfile("test4.txt", &sb);
     //change file size (lseek and write)
     
     //mmap
@@ -143,10 +140,10 @@ void test4()
 void test5()
 {
     int fd;
-    struct stat sb;
-    void* map;
+    
+    char* map;
     //open test file and get stats
-    fd = openstat("test5.txt", &sb);
+    //fd = openfile("test5.txt", &sb);
     //change file size (lseek?)
     
     //mmap
@@ -163,10 +160,10 @@ void test5()
 void test6()
 {
     int fd;
-    struct stat sb;
-    void* map;
+    
+    char* map;
     //open test file and get stats
-    fd = openstat("test6.txt", &sb);
+    //fd = openfile("test6.txt", &sb);
     exit(0);
 }
 
@@ -181,9 +178,9 @@ int main(int argc, char**argv)
         case 1:
             test1();
         case 2:
-            test2();
+            test2and3(2);
         case 3:
-            test3();
+            test2and3(3);
         case 4:
             test4();
         case 5:
