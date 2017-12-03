@@ -99,15 +99,23 @@ void test2and3(int testno)
     if ((map = mmap(NULL, file_size, PROT_READ|PROT_WRITE, flag, fd, 0)) < 0)
     {
         fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
-        exit(-1);
+        exit(255);
     }
     //write to memory
     fprintf(stderr, "writing 'B' to map[50]\n");
     map[50] = 'B';
     //check memory
     char buf[1];
-    lseek(fd, 50, SEEK_SET);
-    read(fd,buf,1);
+    if (lseek(fd, 50, SEEK_SET) < 0)
+    {
+        fprintf(stderr, "Error lseek-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    if (read(fd,buf,1) < 0)
+    {
+        fprintf(stderr, "Error reading test file: %s\n", strerror(errno));
+        exit(255);
+    }
     closemap(map,file_size,fd);
     if (buf[0] == 'B')
     {
@@ -164,28 +172,81 @@ void test4()
 void test5()
 {
     int fd;
-    
+    int file_size = 5000;
     char* map;
     //open test file and get stats
-    //fd = openfile("test5.txt", &sb);
-    //change file size (lseek?)
-    
-    //mmap
-    
-    //write just beyond last byte (X)
-    
-    //change file size by 16 bytes (lseek)
-    
-    //check for byte X
-    
-    exit(0);
+    fd = openfile("test5.txt", file_size);
+    //call mmap
+    if ((map = mmap(NULL, file_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
+    {
+        fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    //write beyond last byte
+    fprintf(stderr, "writing 'B' beyond last byte\n");
+    map[file_size+1] = 'X';
+    //write 16 bytes past eof
+    if (lseek(fd,16,SEEK_END) < 0)
+    {
+        fprintf(stderr, "Error lseek-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    char* buf = "B";
+    if (write(fd,buf,1) < 0)
+    {
+        fprintf(stderr, "Error writing to test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    //check for byte 'X'
+    if (lseek(fd, file_size + 1, SEEK_SET) < 0)
+    {
+        fprintf(stderr, "Error lseek-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    if (read(fd,buf,1) < 0)
+    {
+        fprintf(stderr, "Error reading test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    closemap(map,file_size,fd);
+    if (buf[0] == 'X')
+    {
+        fprintf(stderr, "success!\n");
+        exit(0);
+    }
+    fprintf(stderr, "fail :(\n");
+    exit(1);
+}
+
+void hand6(int sig)
+{
+    fprintf(stderr, "Signal \"%s\" received\n", strsignal(sig));
+    exit(sig);
 }
 
 void test6()
 {
     int fd;
-    
+    int file_size = 1000;
     char* map;
+    //set signal handlers for signals 1 through 31
+    for (int i = 1; i < 32; i++)
+        signal(i,hand6);
+    //open test file and get stats
+    fd = openfile("test6.txt", file_size);
+    //call mmap
+    if ((map = mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
+    {
+        fprintf(stderr, "Error mmap-ing test file: %s\n", strerror(errno));
+        exit(255);
+    }
+    //part a)
+    fprintf(stderr, "reading memory beyond eof in first page\n");
+    fprintf(stderr, "map[2000]: %d\nsuccess!\n", map[2000]);
+    //part b)
+    fprintf(stderr, "reading memory beyond eof in second page\n");
+    fprintf(stderr, "map[5000]: %d\nsuccess!\n", map[5000]);
+    closemap(map,8192,fd);
     exit(0);
 }
 
