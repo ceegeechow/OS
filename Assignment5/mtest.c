@@ -9,10 +9,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <unistd.h>
-
-//is closemap necessary???
 
 int openfile(char* name, int size)
 {
@@ -24,13 +21,25 @@ int openfile(char* name, int size)
         fprintf(stderr, "Could not open test file for reading and writing: %s\n", strerror(errno));
         exit(255);
     }
-    //write to file
-    for (int i = 0; i < size; i++)      //check for partial writes???
-        fprintf(fs, "A");
+    //get file descriptor
     if ((fd = fileno(fs)) < 0)
     {
         fprintf(stderr, "Error getting file descriptor: %s\n", strerror(errno));
         exit(255);
+    }
+    //write to file
+    char buf[size];
+    for (int i = 0; i < size; i++)
+        buf[i] = 'A';
+    int n;
+    while ((n = write(fd,buf,size)) < size)
+    {
+        if (n < 0)
+        {
+            fprintf(stderr, "Error writing to test file: %s\n", strerror(errno));
+            exit(255);
+        }
+        lseek(fd, 0, SEEK_SET);
     }
     return fd;
 }
@@ -51,7 +60,7 @@ void closemap(char* map, int size, int fd)
     }
 }
 
-void hand1(int sig)
+void handle(int sig)
 {
     fprintf(stderr, "Signal \"%s\" received\n", strsignal(sig));
     exit(sig);
@@ -60,11 +69,11 @@ void hand1(int sig)
 void test1()
 {
     int fd;
-    int file_size = 5000; //only works for at least 4097???
+    int file_size = 5000;
     char* map;
     //set signal handlers for signals 1 through 31
     for (int i = 1; i < 32; i++)
-        signal(i,hand1);
+        signal(i,handle);
     //open test file and get stats
     fd = openfile("test1.txt", file_size);
     //call mmap
@@ -77,7 +86,7 @@ void test1()
     fprintf(stderr, "map[3]: %c\n", map[3]);
     fprintf(stderr, "writing to map[3]\n");
     map[3] = 'A';
-    closemap(map,file_size,fd); //do i need this?
+    closemap(map,file_size,fd);
     exit(0);
 }
 
@@ -119,10 +128,10 @@ void test2and3(int testno)
     closemap(map,file_size,fd);
     if (buf[0] == 'B')
     {
-        fprintf(stderr, "success!\n");
+        fprintf(stderr, "success! (byte changed)\n");
         exit(0);
     }
-    fprintf(stderr, "fail :(\n");
+    fprintf(stderr, "fail (byte stayed the same) :(\n");
     exit(1);
 }
 
@@ -162,10 +171,10 @@ void test4()
     closemap(map,file_size,fd);
     if (old == new)
     {
-        fprintf(stderr, "fail :(\n");
+        fprintf(stderr, "success! (file size stayed the same)\n");
         exit(1);
     }
-    fprintf(stderr, "success!\n");
+    fprintf(stderr, "fail (file size changed) :(\n");
     exit(0);
 }
 
@@ -203,25 +212,20 @@ void test5()
         fprintf(stderr, "Error lseek-ing test file: %s\n", strerror(errno));
         exit(255);
     }
-    if (read(fd,buf,1) < 0)
+    char buf2[1];
+    if (read(fd,buf2,1) < 0)
     {
         fprintf(stderr, "Error reading test file: %s\n", strerror(errno));
         exit(255);
     }
     closemap(map,file_size,fd);
-    if (buf[0] == 'X')
+    if (buf2[0] == 'X')
     {
-        fprintf(stderr, "success!\n");
+        fprintf(stderr, "success! (byte 'X' is visible)\n");
         exit(0);
     }
-    fprintf(stderr, "fail :(\n");
+    fprintf(stderr, "fail (byte 'X' isn't visible) :(\n");
     exit(1);
-}
-
-void hand6(int sig)
-{
-    fprintf(stderr, "Signal \"%s\" received\n", strsignal(sig));
-    exit(sig);
 }
 
 void test6()
@@ -231,7 +235,7 @@ void test6()
     char* map;
     //set signal handlers for signals 1 through 31
     for (int i = 1; i < 32; i++)
-        signal(i,hand6);
+        signal(i,handle);
     //open test file and get stats
     fd = openfile("test6.txt", file_size);
     //call mmap
@@ -242,22 +246,16 @@ void test6()
     }
     //part a)
     fprintf(stderr, "reading memory beyond eof in first page\n");
-    fprintf(stderr, "map[2000]: %d\nsuccess!\n", map[2000]);
+    fprintf(stderr, "map[2000]: %d\nread succeeded!\n", map[2000]);
     //part b)
     fprintf(stderr, "reading memory beyond eof in second page\n");
-    fprintf(stderr, "map[5000]: %d\nsuccess!\n", map[5000]);
+    fprintf(stderr, "map[5000]: %d\nread succeeded!\n", map[5000]);
     closemap(map,8192,fd);
     exit(0);
 }
 
 int main(int argc, char**argv)
 {
-//    FILE* fs = fopen("test.txt", "w+");
-//    for (int i = 0; i < 5000; i++)      //check for partial writes???
-//        fprintf(fs, "A");
-//    struct stat buf;
-//    stat("test.txt", &buf);
-//    fprintf(stderr, "size: %lld\n", buf.st_size);
     if (argv[1] == NULL)
     {
         fprintf(stderr, "Please specify test number\n");
@@ -276,7 +274,6 @@ int main(int argc, char**argv)
             test5();
         case 6:
             test6();
-            
         default:
             fprintf(stderr, "Test number must be between 1 and 6\n");
             return 0;
