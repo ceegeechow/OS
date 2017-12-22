@@ -1,14 +1,8 @@
-//
-//  cv.h
-//  
-//
-//  Created by Camille Chow on 12/15/17.
-//
-//
-
 #ifndef ____cv__
 #define ____cv__
 
-#include <stdio.h>
+#include "spinlock.h"
 
-#endif /* defined(____cv__) */
+
+
+#endif
