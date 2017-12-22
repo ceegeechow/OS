@@ -1,6 +1,9 @@
 #ifndef ____spinlock__
 #define ____spinlock__
 
+#include <sys/types.h>
+#include <unistd.h>
+
 struct spinlock {
     char lock;
     pid_t pid;
