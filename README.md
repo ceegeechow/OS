@@ -2,11 +2,11 @@
 
 Assignment 1: minicat.c - concatenate the contents of input files using only system calls
 
-Assignment 2: hunt.c - search file system for a file reporting location, permissions, and link type
+Assignment 2: hunt.c - search file system for a file reporting location, permissions, and number/type of links to the file
 
-Assignment 3: shell.c - implement command line shell that can perform IO redirection, script execution, and report time for each command executed
+Assignment 3: shell.c - implement command line shell that can perform IO redirection, script interpretation, and report time for each command executed
 
-Assignment 4: pipes - redirect IO of three programs through pipes
+Assignment 4: pipes - redirect IO of three programs through pipes, with signal handling 
 
 Assignment 5: mtest.c - experiments with mmap
 
