@@ -1,6 +1,7 @@
 # ECE 357 - Computer Operating Systems
 
-Assignment 1: minicat.c - concatenate the contents of input files using only system calls
+**Assignment 1: minicat.c**
+concatenate the contents of input files using only system calls
 
 Assignment 2: hunt.c - search file system for a file reporting location, permissions, and number/type of links to the file
 
