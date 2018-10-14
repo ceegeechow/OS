@@ -1,15 +1,29 @@
 # ECE 357 - Computer Operating Systems
 
-Assignment 1: minicat.c - concatenate the contents of input files using only system calls
+**Assignment 1: minicat.c**
 
-Assignment 2: hunt.c - search file system for a file reporting location, permissions, and number/type of links to the file
+Concatenate the contents of input files using only system calls
 
-Assignment 3: shell.c - implement command line shell that can perform IO redirection, script interpretation, and report time for each command executed
+**Assignment 2: hunt.c**
 
-Assignment 4: pipes - redirect IO of three programs through pipes, with signal handling 
+Search file system for a file reporting location, permissions, and number/type of links to the file
 
-Assignment 5: mtest.c - experiments with mmap
+**Assignment 3: shell.c**
 
-Assignment 6: synchronization - implement spinlock, condition variables, and fifo such that multiple processes can write to the fifo without conflict
+Implement command line shell that can perform IO redirection, script interpretation, and report time for each command executed
 
-Assignment 7: experiments with syscalls, signals, and exit codes in assembly
+**Assignment 4: pipes**
+
+Redirect IO of three programs through pipes, with signal handling 
+
+**Assignment 5: mtest.c**
+
+Experiments with mmap
+
+**Assignment 6: synchronization**
+
+Implement spinlock, condition variables, and fifo such that multiple processes can write to the fifo without conflict
+
+**Assignment 7**
+
+Experiments with syscalls, signals, and exit codes in assembly
